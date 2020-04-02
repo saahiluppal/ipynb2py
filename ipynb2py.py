@@ -1,5 +1,6 @@
 import json
-import sys
+from absl import app
+from absl import flags
 
 """
 -space 
@@ -7,24 +8,40 @@ import sys
 -> include space
 """
 
-ipynb_name = sys.argv[1]
-py_name = sys.argv[2] if len(sys.argv)>=3 else 'main.py'
+FLAGS = flags.FLAGS
 
-with open(ipynb_name) as handle:
-    output = handle.read()
+flags.DEFINE_string('ipynb', None, "Notebook Path")
+flags.DEFINE_bool('space', False, 'Include Space after each Cell')
+flags.DEFINE_boolean('debug', False, 'Produces debugging output.')
+flags.DEFINE_string('py', None, "Script Path")
 
-script = ''
+def main(argv):
+    if FLAGS.debug:
+        print('Non-Flag Arguments:', argv)
 
-contents = json.loads(output)
+    assert FLAGS.ipynb != None, "Notebook Name not provided"
 
-for cell in contents['cells']:
-    if cell['cell_type'] == 'code':
-        if cell['source']:
-            source = ''.join(cell['source'])
-            if space:
-                script+=(source + '\n\n')
-            else:
-                script+=(source + '\n')
+    if not FLAGS.py:
+        FLAGS.py = FLAGS.ipynb.replace('.ipynb', '.py')
 
-with open(py_name,'w') as handle:
-    handle.writelines(script)
+    with open(FLAGS.ipynb) as handle:
+        output = handle.read()
+
+    script = ''
+
+    contents = json.loads(output)
+
+    for cell in contents['cells']:
+        if cell['cell_type'] == 'code':
+            if cell['source']:
+                source = ''.join(cell['source'])
+                if FLAGS.space:
+                    script+=(source + '\n\n')
+                else:
+                    script+=(source + '\n')
+
+    with open(FLAGS.py,'w') as handle:
+        handle.writelines(script)
+    
+if __name__ == '__main__':
+    app.run(main)
